@@ -1,8 +1,7 @@
-使用方法：
+﻿使用方法：
 获取（更新）成绩信息：进入main.py 将相应参数改为自己的，
 运行main.py当提示输入验证码时查看verifycode.jpg获取到的验证码图片，
-手动输入验证码。获取到的数据在data文件夹下。
-
+下载  tesseract OCR识别验证码  更改pytesseract.pytesseract.tesseract_cmd = r'E:\ocr\tesseract.exe'地址为本地tesseract.exe的地址
 PS：
 1.如果更新成绩过程中遇到报错，首先检查main.py信息是否有误。其次很大概率是验证码输入错误，重试即可。
 2.如果main.py运行后没有自动跳转可视化网页，可以打开终端，输入命令
@@ -15,3 +14,4 @@ python -m streamlit app.py或者streamlit run app.py
 实现自动化登录，然后定时自动运行获取最新成绩信息，可以部署到服务器上全自动并发送一些提醒，接入微信API，邮箱等等。
 3. calculateGPA类中可以加入更多数据计算。可视化可以继续丰富化，保存更多计算后的结果，拓展一些提醒。
 等等
+

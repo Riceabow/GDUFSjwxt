@@ -1,5 +1,6 @@
 import streamlit
 from GDUFSjwxt import jwxt
+
 import streamlit.web.bootstrap as bootstrap
 if __name__ == '__main__':
     jwxt = jwxt(id="", psw="")  # 连接教务系统，参数id 是学号，psw是密码，均为字符串

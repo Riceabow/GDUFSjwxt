@@ -1,8 +1,12 @@
+import time
+from xml.etree.ElementTree import PI
+
 import pandas
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-
+from PIL import Image
+import pytesseract
 # import execjs
 
 session = requests.session()
@@ -32,6 +36,87 @@ def calculate_gpa(grade):
         return 1.0  # D+
     else:
         return 0.0  # F
+
+
+from PIL import Image
+import pytesseract
+import cv2
+
+
+def remove_lines(image_path):
+    # 读取图像
+    image = cv2.imread(image_path)
+
+    # 转换为灰度图像
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # 进行Canny边缘检测
+    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+
+    # 进行霍夫直线检测
+    lines = cv2.HoughLinesP(edges, 1, cv2.HOUGH_GRADIENT, threshold=100, minLineLength=100, maxLineGap=10)
+    if lines is not None:
+        # 在原图上去除检测到的直线
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            cv2.line(image, (x1, y1), (x2, y2), (0, 0, 0), 3)
+    else:
+        # 处理没有检测到直线的情况
+        print("No lines detected.")
+
+    # 保存去除线条后的图像
+    processed_image_path = 'processed_image.jpg'
+    cv2.imwrite(processed_image_path, image)
+
+    return processed_image_path
+import re
+
+def remove_extra_spaces(text):
+    # 去除字符串两端的空格和换行符
+    text = text.strip()
+
+    # 去除字符串中的多余空格和换行符
+    text = ' '.join(text.split())
+
+    # 去除非字母数字字符
+    text = re.sub(r'[^a-zA-Z0-9]', '', text)
+
+    return text
+
+def preprocess_image(image_path):
+    # 读取图像
+    image = cv2.imread(remove_lines(image_path))
+
+    # 转换为灰度图像
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # 二值化处理
+    _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+
+    # 降噪处理
+    denoised = cv2.fastNlMeansDenoising(binary, h=10)
+
+    # 保存预处理后的图像
+    preprocessed_image_path = 'preprocessed_image.jpg'
+    cv2.imwrite(preprocessed_image_path, denoised)
+
+    return preprocessed_image_path
+
+
+def recognize_code(image_path):
+    # 预处理图像
+    preprocessed_image_path = preprocess_image(image_path)
+
+    # 设置Tesseract OCR引擎路径
+    pytesseract.pytesseract.tesseract_cmd = r'E:\ocr\tesseract.exe'
+
+    # 识别验证码
+    image = Image.open(preprocessed_image_path)
+    code = pytesseract.image_to_string(image)
+
+    return code
+
+
 
 
 class jwxt:
@@ -89,41 +174,38 @@ class jwxt:
         return 'verifycode.jpg'
 
     def login(self):
-        self.get_login_cookies()
-        self.verify_code = input("请输入验证码：")
-        # image = ReadImage()
-        header = {
+            self.get_login_cookies()
+            image_path = 'verifycode.jpg'
+            code = remove_extra_spaces(recognize_code(image_path))
+            print(code)
+            self.verify_code = code
 
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
-            "Cache-Control": "no-cache",
-            "Content-Length": "55",
-            "Content-Type": "application/x-www-form-urlencoded",  # 接收类型
-            "Cookie": self.cookie,
-            "Host": "jxgl.gdufs.edu.cn",
-            "Origin": "https://jxgl.gdufs.edu.cn",
-            "Connection": "keep-alive",
-            "Referer": "https://jxgl.gdufs.edu.cn/jsxsd/",
-            "Upgrade-Insecure-Requests": "1",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
-        }
-        PostData = {
-            'USERNAME': self.use_id,
-            'PASSWORD': self.password,
-            'RANDOMCODE': self.verify_code
-        }
-        url = 'https://jxgl.gdufs.edu.cn/jsxsd/xk/LoginToXkLdap'
-        msg = session.post(url, headers=header, data=PostData, timeout=1000)
-        # 处理重定向 (前面的请求加上参数 allow_redirects=False)
-        # if msg.status_code == 302:  # 检查是否发生重定向
-        #     location = msg.headers['Location']  # 获取重定向的URL
-        #     # 这里可以根据需要处理重定向的逻辑，例如再次发送请求到重定向后的URL
-        #     # 或者保存重定向的URL以便后续使用
-        #     print(f"发生重定向，重定向后的URL是: {location}")
-        print(msg.url)
-        print(msg.status_code)
-        # print(msg.text)
+            header = {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+                "Cache-Control": "no-cache",
+                "Content-Length": "55",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Cookie": self.cookie,
+                "Host": "jxgl.gdufs.edu.cn",
+                "Origin": "https://jxgl.gdufs.edu.cn",
+                "Connection": "keep-alive",
+                "Referer": "https://jxgl.gdufs.edu.cn/jsxsd/",
+                "Upgrade-Insecure-Requests": "1",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0"
+            }
+            PostData = {
+                'USERNAME': self.use_id,
+                'PASSWORD': self.password,
+                'RANDOMCODE': self.verify_code
+            }
+            url = 'https://jxgl.gdufs.edu.cn/jsxsd/xk/LoginToXkLdap'
+
+            msg = session.post(url, headers=header, data=PostData, timeout=1000)
+            print(msg.url)
+            print(msg.status_code)
+
 
     def QScoreList(self):
         header = {
@@ -149,10 +231,19 @@ class jwxt:
             "xsfs": "all"
         }
         url = 'https://jxgl.gdufs.edu.cn/jsxsd/kscj/cjcx_list'
-        msg = session.post(url, headers=header, data=PostData, timeout=1000)
-        print(msg.url)
-        # print(msg.status_code)
-        self.dataStr = msg.text
+        while True:
+            msg = session.post(url, headers=header, data=PostData, timeout=1000)
+            print(msg.url)
+            if msg.status_code == 200:
+                soup = BeautifulSoup(msg.text, 'html.parser')
+                table = soup.find('table', class_='Nsb_r_list Nsb_table')
+                if table is not None:
+                    self.dataStr = msg.text
+                    # 继续处理表格数据
+                    break
+            # 重新登录
+            self.login()
+
         # print(msg.text)
 
     # 定义绩点计算函数
